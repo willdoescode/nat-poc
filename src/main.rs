@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod input;
 use std::os::unix::fs::{MetadataExt};
 use structopt::StructOpt;
@@ -5,7 +6,7 @@ use termion;
 use ansi_term;
 
 struct Directory {
-  paths: Vec<Path>,
+  paths: Vec<File>,
 }
 
 enum DirSortType {
@@ -16,11 +17,13 @@ enum DirSortType {
   Not,
 }
 
-struct Path {
+#[derive(Clone)]
+struct File {
   path: std::path::PathBuf,
   file_type: PathType,
 }
 
+#[derive(Copy, Clone)]
 enum PathType {
   Dir,
   Symlink,
@@ -57,7 +60,7 @@ impl PathType {
   }
 }
 
-impl Path {
+impl File {
   fn new(file: std::path::PathBuf) -> Self {
     Self {
       file_type: PathType::new(&file).unwrap(),
@@ -106,7 +109,8 @@ impl Directory {
             .to_lowercase()
             .contains(&dir.display().to_string().to_lowercase())
             {
-              new_paths.push(Path::new(p))
+              let f = File::new(p);
+              new_paths.push(f)
             }
       }
       if new_paths.is_empty() {
@@ -121,8 +125,8 @@ impl Directory {
     }
     else {
       let paths = std::fs::read_dir(dir)?
-        .map(|res| res.map(|e| Path::new(e.path()) ))
-        .collect::<Result<Vec<Path>, std::io::Error>>()?;
+        .map(|res| res.map(|e| File::new(e.path())))
+        .collect::<Result<Vec<File>, std::io::Error>>()?;
       Ok(
         Self {
           paths
@@ -147,6 +151,40 @@ impl Directory {
     self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()))
   }
 
+  fn sort_directory_then_path(&mut self) {
+    let new = &self.paths;
+    let mut newer = Vec::new();
+    let mut directorys = Vec::new();
+    for (i, f) in new.iter().enumerate() {
+      if f.path.symlink_metadata().unwrap().is_dir() {
+        directorys.push(new[i].clone());
+      } else {
+        newer.push(new[i].clone())
+      }
+    } 
+    match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
+      DirSortType::Name => {
+        directorys.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()));
+        newer.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()));
+      },
+      DirSortType::Created => { 
+        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()));
+        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()))
+      },
+      DirSortType::Modified => { 
+        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()));
+        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()));
+      },
+      DirSortType::Size => {
+        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()));
+        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()));
+      },
+      DirSortType::Not => (),
+    }
+    directorys.append(&mut newer);
+    self.paths = directorys; 
+  }
+
   fn sort_paths(&mut self) {
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
       DirSortType::Name => { 
@@ -164,6 +202,12 @@ impl Directory {
       DirSortType::Not => (),
     }
   }
+  fn sort(&mut self) {
+    match input::Cli::from_args().gdf {
+      true => self.sort_directory_then_path(),
+      false => self.sort_paths(),
+    }
+  }
 }
 
 impl std::fmt::Display for Directory {
@@ -178,6 +222,7 @@ impl std::fmt::Display for Directory {
 
 fn main() {
   let mut dir = Directory::new(input::Cli::from_args().dir).unwrap();
-  dir.sort_paths();
+  dir.sort();
   println!("{}", dir)
 }
+
