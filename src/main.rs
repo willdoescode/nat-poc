@@ -1,6 +1,8 @@
 mod input;
 use std::os::unix::fs::{MetadataExt};
 use structopt::StructOpt;
+use termion;
+use ansi_term;
 
 struct Directory {
   paths: Vec<File>,
@@ -14,15 +16,15 @@ enum DirSortType {
   Not,
 }
 
+struct File {
+  path: std::path::PathBuf,
+  file_type: FileType,
+}
+
 enum FileType {
   Dir,
   Symlink,
   File,
-}
-
-struct File {
-  path: std::path::PathBuf,
-  file_type: FileType,
 }
 
 impl FileType {
@@ -35,6 +37,22 @@ impl FileType {
           false => Ok(Self::File)
         }
       }
+    }
+  }
+
+  fn get_color_for_type(&self) -> String {
+    match self {
+      Self::Dir => format!("{}", termion::color::Fg(termion::color::LightBlue)),
+      Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
+      Self::File => format!("{}", termion::color::Fg(termion::color::LightGreen))
+    }
+  }
+
+  fn get_text_traits_for_type(&self) -> ansi_term::Style {
+    match self {
+      Self::Dir => ansi_term::Style::new().bold(),
+      Self::Symlink => ansi_term::Style::new().italic(),
+      Self::File => ansi_term::Style::new().bold(),
     }
   }
 }
@@ -152,7 +170,7 @@ impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in &self.paths {
-        write!(f, " {} ", i.path.file_name().unwrap().to_str().unwrap())?;
+        write!(f, " {} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
       }
     )
   }

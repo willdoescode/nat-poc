@@ -7,6 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ansi_term = "0.12.1"
 chrono = "0.4.19"
 filetime = "0.2.13"
 structopt = "0.3.20"
+termion = "1.5.5"
