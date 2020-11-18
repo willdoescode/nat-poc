@@ -5,7 +5,7 @@ use termion;
 use ansi_term;
 
 struct Directory {
-  paths: Vec<File>,
+  paths: Vec<Path>,
 }
 
 enum DirSortType {
@@ -16,25 +16,25 @@ enum DirSortType {
   Not,
 }
 
-struct File {
+struct Path {
   path: std::path::PathBuf,
-  file_type: FileType,
+  file_type: PathType,
 }
 
-enum FileType {
+enum PathType {
   Dir,
   Symlink,
-  File,
+  Path,
 }
 
-impl FileType {
+impl PathType {
   fn new(file: &std::path::PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
     match file.symlink_metadata()?.is_dir() {
       true => Ok(Self::Dir),
       false => {
         match file.symlink_metadata()?.file_type().is_symlink() {
           true => Ok(Self::Symlink),
-          false => Ok(Self::File)
+          false => Ok(Self::Path)
         }
       }
     }
@@ -44,7 +44,7 @@ impl FileType {
     match self {
       Self::Dir => format!("{}", termion::color::Fg(termion::color::LightBlue)),
       Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
-      Self::File => format!("{}", termion::color::Fg(termion::color::LightGreen))
+      Self::Path => format!("{}", termion::color::Fg(termion::color::LightGreen))
     }
   }
 
@@ -52,15 +52,15 @@ impl FileType {
     match self {
       Self::Dir => ansi_term::Style::new().bold(),
       Self::Symlink => ansi_term::Style::new().italic(),
-      Self::File => ansi_term::Style::new().bold(),
+      Self::Path => ansi_term::Style::new().bold(),
     }
   }
 }
 
-impl File {
+impl Path {
   fn new(file: std::path::PathBuf) -> Self {
     Self {
-      file_type: FileType::new(&file).unwrap(),
+      file_type: PathType::new(&file).unwrap(),
       path: file,
     }
   }
@@ -106,11 +106,11 @@ impl Directory {
             .to_lowercase()
             .contains(&dir.display().to_string().to_lowercase())
             {
-              new_paths.push(File::new(p))
+              new_paths.push(Path::new(p))
             }
       }
       if new_paths.is_empty() {
-        println!("File could not be found");
+        println!("Path could not be found");
         std::process::exit(1)
       }
       Ok (
@@ -121,8 +121,8 @@ impl Directory {
     }
     else {
       let paths = std::fs::read_dir(dir)?
-        .map(|res| res.map(|e| File::new(e.path()) ))
-        .collect::<Result<Vec<File>, std::io::Error>>()?;
+        .map(|res| res.map(|e| Path::new(e.path()) ))
+        .collect::<Result<Vec<Path>, std::io::Error>>()?;
       Ok(
         Self {
           paths
