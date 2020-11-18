@@ -1,7 +1,6 @@
 mod input;
 use std::os::unix::fs::{MetadataExt};
 use structopt::StructOpt;
-use std::fmt;
 
 #[derive(Debug)]
 struct Directory {
@@ -59,6 +58,10 @@ impl Directory {
               new_paths.push(p)
             }
       }
+      if new_paths.is_empty() {
+        println!("File could not be found");
+        std::process::exit(1)
+      }
       Ok (
         Self {
           paths: new_paths
@@ -77,27 +80,43 @@ impl Directory {
     }
   }
 
+  fn name_sort(&mut self) {
+    self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+  }
+
+  fn create_sort(&mut self) {
+    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().created().unwrap().cmp(&b.symlink_metadata().unwrap().created().unwrap()))
+  }
+
+  fn modified_sort(&mut self) {
+    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().modified().unwrap().cmp(&b.symlink_metadata().unwrap().modified().unwrap()))
+  }
+
+  fn size_sort(&mut self) {
+    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().size().cmp(&b.symlink_metadata().unwrap().size()))
+  }
+
   fn sort_paths(&mut self) {
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
       DirSortType::Name => { 
-        self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+        self.name_sort();
       },
       DirSortType::Created => { 
-        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().created().unwrap().cmp(&b.symlink_metadata().unwrap().created().unwrap()))
+        self.create_sort();
       },
       DirSortType::Modified => { 
-        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().modified().unwrap().cmp(&b.symlink_metadata().unwrap().modified().unwrap()))
+        self.modified_sort();
       },
-      DirSortType::Size => { 
-        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().size().cmp(&b.symlink_metadata().unwrap().size()))
+      DirSortType::Size => {
+        self.size_sort();
       },
       DirSortType::Not => (),
     }
   }
 }
 
-impl fmt::Display for Directory {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Directory {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in &self.paths {
         write!(f, " {} ", i.file_name().unwrap().to_str().unwrap())?;
