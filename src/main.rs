@@ -2,9 +2,8 @@ mod input;
 use std::os::unix::fs::{MetadataExt};
 use structopt::StructOpt;
 
-#[derive(Debug)]
 struct Directory {
-  paths: Vec<std::path::PathBuf>,
+  paths: Vec<File>,
 }
 
 enum DirSortType {
@@ -13,6 +12,40 @@ enum DirSortType {
   Modified,
   Size,
   Not,
+}
+
+enum FileType {
+  Dir,
+  Symlink,
+  File,
+}
+
+struct File {
+  path: std::path::PathBuf,
+  file_type: FileType,
+}
+
+impl FileType {
+  fn new(file: &std::path::PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
+    match file.symlink_metadata()?.is_dir() {
+      true => Ok(Self::Dir),
+      false => {
+        match file.symlink_metadata()?.file_type().is_symlink() {
+          true => Ok(Self::Symlink),
+          false => Ok(Self::File)
+        }
+      }
+    }
+  }
+}
+
+impl File {
+  fn new(file: std::path::PathBuf) -> Self {
+    Self {
+      file_type: FileType::new(&file).unwrap(),
+      path: file,
+    }
+  }
 }
 
 fn get_sort_type(sort_t: [bool; 4]) -> DirSortType {
@@ -55,7 +88,7 @@ impl Directory {
             .to_lowercase()
             .contains(&dir.display().to_string().to_lowercase())
             {
-              new_paths.push(p)
+              new_paths.push(File::new(p))
             }
       }
       if new_paths.is_empty() {
@@ -70,8 +103,8 @@ impl Directory {
     }
     else {
       let paths = std::fs::read_dir(dir)?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<std::path::PathBuf>, std::io::Error>>()?;
+        .map(|res| res.map(|e| File::new(e.path()) ))
+        .collect::<Result<Vec<File>, std::io::Error>>()?;
       Ok(
         Self {
           paths
@@ -81,19 +114,19 @@ impl Directory {
   }
 
   fn name_sort(&mut self) {
-    self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+    self.paths.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()))
   }
 
   fn create_sort(&mut self) {
-    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().created().unwrap().cmp(&b.symlink_metadata().unwrap().created().unwrap()))
+    self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()))
   }
 
   fn modified_sort(&mut self) {
-    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().modified().unwrap().cmp(&b.symlink_metadata().unwrap().modified().unwrap()))
+    self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()))
   }
 
   fn size_sort(&mut self) {
-    self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().size().cmp(&b.symlink_metadata().unwrap().size()))
+    self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()))
   }
 
   fn sort_paths(&mut self) {
@@ -119,7 +152,7 @@ impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in &self.paths {
-        write!(f, " {} ", i.file_name().unwrap().to_str().unwrap())?;
+        write!(f, " {} ", i.path.file_name().unwrap().to_str().unwrap())?;
       }
     )
   }
