@@ -1,3 +1,9 @@
+mod input;
+use chrono;
+use filetime;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use structopt::StructOpt;
+
 #[derive(Debug)]
 struct Directory {
   paths: Vec<std::path::PathBuf>,
@@ -47,18 +53,18 @@ impl Directory {
   }
 
   fn sort_paths(&mut self) {
-    match get_sort_type([true, false, false, false]) {
+    match get_sort_type([false, false, true, false]) {
       DirSortType::Name => { 
         self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
       },
       DirSortType::Created => { 
-        self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().created().unwrap().cmp(&b.symlink_metadata().unwrap().created().unwrap()))
       },
       DirSortType::Modified => { 
-        self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().modified().unwrap().cmp(&b.symlink_metadata().unwrap().modified().unwrap()))
       },
       DirSortType::Size => { 
-        self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
+        self.paths.sort_by(|a, b| a.symlink_metadata().unwrap().size().cmp(&b.symlink_metadata().unwrap().size()) )
       },
       DirSortType::Not => { 
         self.paths.sort_by(|a, b| a.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.file_name().unwrap().to_str().unwrap().to_lowercase()))
@@ -68,7 +74,7 @@ impl Directory {
 }
 
 fn main() {
-  let mut dir = Directory::new(std::path::PathBuf::from(".")).unwrap();
+  let mut dir = Directory::new(input::Cli::from_args().dir).unwrap();
   dir.sort_paths();
   println!("{:?}", dir)
 }
