@@ -1,7 +1,5 @@
 mod input;
-use chrono;
-use filetime;
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::{MetadataExt};
 use structopt::StructOpt;
 use std::fmt;
 
@@ -48,6 +46,7 @@ impl Directory {
       let paths = std::fs::read_dir(".")?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<std::path::PathBuf>, std::io::Error>>()?;
+
       for p in paths {
         if p
           .file_name()
@@ -97,11 +96,13 @@ impl Directory {
   }
 }
 
-
 impl fmt::Display for Directory {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let vec = &self.paths;
-    write!(f, "{:?}", vec)
+    Ok(
+      for i in &self.paths {
+        write!(f, " {} ", i.file_name().unwrap().to_str().unwrap())?;
+      }
+    )
   }
 }
 
