@@ -24,6 +24,6 @@ pub struct Cli {
   pub size: bool,
   
   /// Groups directorys before files
-  #[structopt(short = "h", long = "gdf")]
+  #[structopt(short = "g", long = "gdf")]
   pub gdf: bool,
 }
