@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 mod input;
-use std::os::unix::fs::{MetadataExt};
+mod text_effects;
+use std::os::unix::fs::{MetadataExt, FileTypeExt};
 use structopt::StructOpt;
 use termion;
-use ansi_term;
 
 struct Directory {
   paths: Vec<File>,
@@ -21,34 +21,65 @@ enum DirSortType {
 #[derive(Clone)]
 struct File {
   path: std::path::PathBuf,
-  file_type: PathType,
+  file_type: Vec<PathType>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum PathType {
   Dir,
   Symlink,
   Path,
+  Pipe,
+  CharD,
+  BlockD,
+  Socket,
 }
 
 impl PathType {
-  fn new(file: &std::path::PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
-    match file.symlink_metadata()?.is_dir() {
-      true => Ok(Self::Dir),
-      false => {
-        match file.symlink_metadata()?.file_type().is_symlink() {
-          true => Ok(Self::Symlink),
-          false => Ok(Self::Path)
-        }
-      }
+  fn new(file: &std::path::PathBuf) -> Result<Vec<Self>, Box<dyn std::error::Error>> {
+    let mut return_val = Vec::new();
+    if file.symlink_metadata()?.is_dir() {
+      return_val.push(Self::Dir)
+    } else {
+      return_val.push(Self::Path)
     }
+    if file.symlink_metadata()?.file_type().is_symlink() {
+      return_val.push(Self::Symlink)
+    } else {
+      return_val.push(Self::Path)
+    }
+    if file.symlink_metadata()?.file_type().is_fifo() {
+      return_val.push(Self::Pipe)
+    } else {
+      return_val.push(Self::Path)
+    }
+    if file.symlink_metadata()?.file_type().is_char_device() {
+      return_val.push(Self::CharD)
+    } else {
+      return_val.push(Self::Path)
+    }
+    if file.symlink_metadata()?.file_type().is_block_device() {
+      return_val.push(Self::BlockD)
+    } else {
+      return_val.push(Self::Path)
+    }
+    if file.symlink_metadata()?.file_type().is_socket() {
+      return_val.push(Self::Socket)
+    } else {
+      return_val.push(Self::Path)
+    }
+    Ok(return_val)
   }
 
   fn get_color_for_type(&self) -> String {
     match self {
       Self::Dir => format!("{}", termion::color::Fg(termion::color::LightBlue)),
       Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
-      Self::Path => format!("{}", termion::color::Fg(termion::color::LightGreen))
+      Self::Path => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::Pipe => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::CharD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::BlockD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::Socket => format!("{}", termion::color::Fg(termion::color::LightGreen)),
     }
   }
 
@@ -57,6 +88,10 @@ impl PathType {
       Self::Dir => ansi_term::Style::new().bold(),
       Self::Symlink => ansi_term::Style::new().italic(),
       Self::Path => ansi_term::Style::new().bold(),
+      Self::Pipe => ansi_term::Style::new().bold(),
+      Self::CharD => ansi_term::Style::new().bold(),
+      Self::BlockD => ansi_term::Style::new().bold(),
+      Self::Socket => ansi_term::Style::new().bold(),
     }
   }
 }
@@ -82,8 +117,7 @@ fn get_sort_type(sort_t: [bool; 4]) -> DirSortType {
         },
         2 => {
           return DirSortType::Modified
-        },
-        3 => {
+        }, 3 => {
           return DirSortType::Size
         },
         _ => ()
@@ -190,18 +224,10 @@ impl Directory {
 
   fn sort_paths(&mut self) {
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
-      DirSortType::Name => { 
-        self.name_sort();
-      },
-      DirSortType::Created => { 
-        self.create_sort();
-      },
-      DirSortType::Modified => { 
-        self.modified_sort();
-      },
-      DirSortType::Size => {
-        self.size_sort();
-      },
+      DirSortType::Name => self.name_sort(),
+      DirSortType::Created => self.create_sort(),
+      DirSortType::Modified => self.modified_sort(),
+      DirSortType::Size => self.size_sort(),
       DirSortType::Not => (),
     }
   }
@@ -213,21 +239,19 @@ impl Directory {
   }
 }
 
+impl std::fmt::Display for File {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    Ok(
+      write!(f, "{}{}{}", text_effects::bold().0 ,self.path.file_name().unwrap().to_str().unwrap(), text_effects::bold().1)?
+    )
+  }
+}
+
 impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
-      for i in &self.paths {
-        match i.file_type {
-          PathType::Dir => {
-            write!(f, "{}/ ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
-          },
-          PathType::Symlink => {
-            write!(f, "{} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
-          },
-          PathType::Path => {
-            write!(f, "{} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
-          }
-        }
+      for i in self.paths.iter() {
+        write!(f, "{:?} {} \n", i.file_type, i)?;
       }
     )
   }
