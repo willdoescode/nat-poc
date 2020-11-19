@@ -7,6 +7,7 @@ use ansi_term;
 
 struct Directory {
   paths: Vec<File>,
+  stdout: std::io::Stdout,
 }
 
 enum DirSortType {
@@ -119,7 +120,8 @@ impl Directory {
       }
       Ok (
         Self {
-          paths: new_paths
+          paths: new_paths,
+          stdout: std::io::stdout(),
         }
       )
     }
@@ -129,7 +131,8 @@ impl Directory {
         .collect::<Result<Vec<File>, std::io::Error>>()?;
       Ok(
         Self {
-          paths
+          paths,
+          stdout: std::io::stdout(),
         }
       )
     }
@@ -214,7 +217,17 @@ impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in &self.paths {
-        write!(f, " {} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
+        match i.file_type {
+          PathType::Dir => {
+            write!(f, "{}/ ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
+          },
+          PathType::Symlink => {
+            write!(f, "{} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
+          },
+          PathType::Path => {
+            write!(f, "{} ", i.file_type.get_text_traits_for_type().paint(format!("{}{}", i.file_type.get_color_for_type(), i.path.file_name().unwrap().to_str().unwrap())))?;
+          }
+        }
       }
     )
   }
