@@ -242,7 +242,7 @@ impl Directory {
 impl std::fmt::Display for File {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
-      write!(f, "{}{}{}", text_effects::bold().0 ,self.path.file_name().unwrap().to_str().unwrap(), text_effects::bold().1)?
+      write!(f, "{}", text_effects::italic(self.path.file_name().unwrap().to_str().unwrap()))?
     )
   }
 }
@@ -263,3 +263,5 @@ fn main() {
   println!("{}", dir)
 }
 
+#[cfg(test)]
+mod tests;
