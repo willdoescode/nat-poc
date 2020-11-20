@@ -40,34 +40,32 @@ impl PathType {
     let mut return_val = Vec::new();
     if file.symlink_metadata()?.is_dir() {
       return_val.push(Self::Dir)
-    } else {
-      return_val.push(Self::Path)
-    }
+    } 
+
     if file.symlink_metadata()?.file_type().is_symlink() {
       return_val.push(Self::Symlink)
-    } else {
-      return_val.push(Self::Path)
     }
+
     if file.symlink_metadata()?.file_type().is_fifo() {
       return_val.push(Self::Pipe)
-    } else {
-      return_val.push(Self::Path)
-    }
+    } 
+
     if file.symlink_metadata()?.file_type().is_char_device() {
       return_val.push(Self::CharD)
-    } else {
-      return_val.push(Self::Path)
     }
+
     if file.symlink_metadata()?.file_type().is_block_device() {
       return_val.push(Self::BlockD)
-    } else {
-      return_val.push(Self::Path)
     }
+
     if file.symlink_metadata()?.file_type().is_socket() {
       return_val.push(Self::Socket)
-    } else {
+    } 
+
+    if return_val.is_empty() {
       return_val.push(Self::Path)
     }
+
     Ok(return_val)
   }
 
@@ -245,9 +243,11 @@ impl std::fmt::Display for File {
     let mut res = String::new();
     for (i, v) in self.file_type.iter().enumerate() {
       if i == 0 {
-        res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap())
+        res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap());
+        res = format!("{}{}", v.get_color_for_type(), res);
       } else {
-        res = v.get_text_traits_for_type(&res)
+        res = v.get_text_traits_for_type(&res);
+        res = format!("{}{}", v.get_color_for_type(), res);
       }
     }
     Ok(
