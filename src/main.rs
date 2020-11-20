@@ -164,29 +164,29 @@ impl Directory {
     }
   }
 
-  fn name_sort(&mut self) {
+  fn self_name_sort(&mut self) {
     self.paths.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()))
   }
 
-  fn create_sort(&mut self) {
+  fn self_create_sort(&mut self) {
     self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()))
   }
 
-  fn modified_sort(&mut self) {
+  fn self_modified_sort(&mut self) {
     self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()))
   }
 
-  fn size_sort(&mut self) {
+  fn self_size_sort(&mut self) {
     self.paths.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()))
   }
 
   fn sort_directory_then_path(&mut self) {
     let new = &self.paths;
     let mut newer = Vec::new();
-    let mut directorys = Vec::new();
+    let mut directories = Vec::new();
     for (i, f) in new.iter().enumerate() {
       if f.path.symlink_metadata().unwrap().is_dir() {
-        directorys.push(new[i].clone());
+        directories.push(new[i].clone());
       } else {
         newer.push(new[i].clone())
       }
@@ -194,33 +194,34 @@ impl Directory {
 
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
       DirSortType::Name => {
-        directorys.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()));
-        newer.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()));
+        name_sort(&mut directories);
+        name_sort(&mut newer)
       },
-      DirSortType::Created => { 
-        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()));
-        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()))
+      DirSortType::Created => {
+        create_sort(&mut directories);
+        create_sort(&mut newer)
       },
-      DirSortType::Modified => { 
-        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()));
-        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()));
+      DirSortType::Modified => {
+        modified_sort(&mut directories);
+        modified_sort(&mut newer)
       },
       DirSortType::Size => {
-        directorys.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()));
-        newer.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()));
+        size_sort(&mut directories);
+        size_sort(&mut newer)
       },
       DirSortType::Not => (),
     }
-    directorys.append(&mut newer);
-    self.paths = directorys; 
+
+    directories.append(&mut newer);
+    self.paths = directories; 
   }
 
   fn sort_paths(&mut self) {
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
-      DirSortType::Name => self.name_sort(),
-      DirSortType::Created => self.create_sort(),
-      DirSortType::Modified => self.modified_sort(),
-      DirSortType::Size => self.size_sort(),
+      DirSortType::Name => self.self_name_sort(),
+      DirSortType::Created => self.self_create_sort(),
+      DirSortType::Modified => self.self_modified_sort(),
+      DirSortType::Size => self.self_size_sort(),
       DirSortType::Not => (),
     }
   }
@@ -231,6 +232,22 @@ impl Directory {
       false => self.sort_paths(),
     }
   }
+}
+
+fn name_sort(dir: &mut Vec<File>) {
+  dir.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()))
+}
+
+fn create_sort(dir: &mut Vec<File>) {
+  dir.sort_by(|a, b| a.path.symlink_metadata().unwrap().created().unwrap().cmp(&b.path.symlink_metadata().unwrap().created().unwrap()))
+}
+
+fn modified_sort(dir: &mut Vec<File>) {
+  dir.sort_by(|a, b| a.path.symlink_metadata().unwrap().modified().unwrap().cmp(&b.path.symlink_metadata().unwrap().modified().unwrap()))
+}
+
+fn size_sort(dir: &mut Vec<File>) {
+  dir.sort_by(|a, b| a.path.symlink_metadata().unwrap().size().cmp(&b.path.symlink_metadata().unwrap().size()))
 }
 
 impl std::fmt::Display for File {
