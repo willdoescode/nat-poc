@@ -83,15 +83,15 @@ impl PathType {
     }
   }
 
-  fn get_text_traits_for_type(&self) -> ansi_term::Style {
+  fn get_text_traits_for_type(&self, name: &str) -> String {
     match self {
-      Self::Dir => ansi_term::Style::new().bold(),
-      Self::Symlink => ansi_term::Style::new().italic(),
-      Self::Path => ansi_term::Style::new().bold(),
-      Self::Pipe => ansi_term::Style::new().bold(),
-      Self::CharD => ansi_term::Style::new().bold(),
-      Self::BlockD => ansi_term::Style::new().bold(),
-      Self::Socket => ansi_term::Style::new().bold(),
+      Self::Dir => text_effects::bold(name),
+      Self::Symlink => text_effects::italic(name),
+      Self::Path => text_effects::bold(name),
+      Self::Pipe => text_effects::bold(name),
+      Self::CharD => text_effects::bold(name),
+      Self::BlockD => text_effects::bold(name),
+      Self::Socket => text_effects::bold(name),
     }
   }
 }
@@ -158,8 +158,7 @@ impl Directory {
           stdout: std::io::stdout(),
         }
       )
-    }
-    else {
+    } else {
       let paths = std::fs::read_dir(dir)?
         .map(|res| res.map(|e| File::new(e.path())))
         .collect::<Result<Vec<File>, std::io::Error>>()?;
@@ -199,6 +198,7 @@ impl Directory {
         newer.push(new[i].clone())
       }
     } 
+
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
       DirSortType::Name => {
         directorys.sort_by(|a, b| a.path.file_name().unwrap().to_str().unwrap().to_lowercase().cmp(&b.path.file_name().unwrap().to_str().unwrap().to_lowercase()));
@@ -231,6 +231,7 @@ impl Directory {
       DirSortType::Not => (),
     }
   }
+
   fn sort(&mut self) {
     match input::Cli::from_args().gdf {
       true => self.sort_directory_then_path(),
@@ -241,8 +242,16 @@ impl Directory {
 
 impl std::fmt::Display for File {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mut res = String::new();
+    for (i, v) in self.file_type.iter().enumerate() {
+      if i == 0 {
+        res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap())
+      } else {
+        res = v.get_text_traits_for_type(&res)
+      }
+    }
     Ok(
-      write!(f, "{}", text_effects::italic(self.path.file_name().unwrap().to_str().unwrap()))?
+      write!(f, "{}", res )?
     )
   }
 }
