@@ -260,7 +260,7 @@ impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in self.paths.iter() {
-        write!(f, "{:?} {} \n", i.file_type, i)?;
+        write!(f, "{} ", i)?;
       }
     )
   }
