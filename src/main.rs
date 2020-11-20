@@ -83,7 +83,7 @@ impl PathType {
 
   fn get_text_traits_for_type(&self, name: &str) -> String {
     match self {
-      Self::Dir => text_effects::bold(name),
+      Self::Dir => text_effects::bold(&format!("{}/", name)),
       Self::Symlink => text_effects::italic(name),
       Self::Path => text_effects::bold(name),
       Self::Pipe => text_effects::bold(name),
