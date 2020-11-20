@@ -107,17 +107,10 @@ fn get_sort_type(sort_t: [bool; 4]) -> DirSortType {
   for (i, t) in sort_t.iter().enumerate() {
     if *t {
       match i {
-        0 => {
-          return DirSortType::Name
-        },
-        1 => {
-          return DirSortType::Created
-        },
-        2 => {
-          return DirSortType::Modified
-        }, 3 => {
-          return DirSortType::Size
-        },
+        0 => return DirSortType::Name,
+        1 => return DirSortType::Created,
+        2 => return DirSortType::Modified, 
+        3 => return DirSortType::Size,
         _ => ()
       }
     }
@@ -146,10 +139,12 @@ impl Directory {
               new_paths.push(f)
             }
       }
+
       if new_paths.is_empty() {
         println!("Path could not be found");
         std::process::exit(1)
       }
+
       Ok (
         Self {
           paths: new_paths,
