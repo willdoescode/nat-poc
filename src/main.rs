@@ -73,20 +73,20 @@ impl PathType {
     match self {
       Self::Dir => format!("{}", termion::color::Fg(termion::color::LightBlue)),
       Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
-      Self::Path => format!("{}", termion::color::Fg(termion::color::LightGreen)),
-      Self::Pipe => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::Path => format!("{}", termion::color::Fg(termion::color::White)),
+      Self::Pipe => format!("{}", termion::color::Fg(termion::color::Yellow)),
       Self::CharD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
       Self::BlockD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
       Self::Socket => format!("{}", termion::color::Fg(termion::color::LightGreen)),
     }
   }
 
-  fn get_text_traits_for_type(&self, name: &str) -> String {
+  fn get_text_traits_for_type(&self, name: &str, file: &std::path::PathBuf) -> String {
     match self {
       Self::Dir => text_effects::bold(&format!("{}/", name)),
-      Self::Symlink => text_effects::italic(name),
+      Self::Symlink => text_effects::italic(&format!("{} -> {}", name, std::fs::canonicalize(std::fs::read_link(file).unwrap()).unwrap_or(file.clone()).to_str().unwrap_or(name))),
       Self::Path => text_effects::bold(name),
-      Self::Pipe => text_effects::bold(name),
+      Self::Pipe => text_effects::bold(&format!("{}|", name)),
       Self::CharD => text_effects::bold(name),
       Self::BlockD => text_effects::bold(name),
       Self::Socket => text_effects::bold(name),
@@ -255,16 +255,14 @@ impl std::fmt::Display for File {
     let mut res = String::new();
     for (i, v) in self.file_type.iter().enumerate() {
       if i == 0 {
-        res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap());
+        res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap(), &self.path);
         res = format!("{}{}", v.get_color_for_type(), res);
       } else {
-        res = v.get_text_traits_for_type(&res);
+        res = v.get_text_traits_for_type(&res, &self.path);
         res = format!("{}{}", v.get_color_for_type(), res);
       }
     }
-    Ok(
-      write!(f, "{}", res )?
-    )
+    write!(f, "{}", res )
   }
 }
 
