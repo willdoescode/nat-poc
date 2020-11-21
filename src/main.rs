@@ -7,7 +7,6 @@ use termion;
 
 struct Directory {
   paths: Vec<File>,
-  stdout: std::io::Stdout,
 }
 
 enum DirSortType {
@@ -128,7 +127,6 @@ impl Directory {
       Ok (
         Self {
           paths: new_paths,
-          stdout: std::io::stdout(),
         }
       )
     } else {
@@ -138,7 +136,6 @@ impl Directory {
       Ok(
         Self {
           paths,
-          stdout: std::io::stdout(),
         }
       )
     }
