@@ -62,10 +62,10 @@ impl PathType {
 
   fn get_text_traits_for_type(&self, name: &str, file: &std::path::PathBuf) -> String {
     match self {
-      Self::Dir => text_effects::bold(&format!("{}/", name)),
+      Self::Dir => text_effects::bold(&format!("{}{}/", name, termion::color::Fg(termion::color::White))),
       Self::Symlink => text_effects::italic(&format!("{} -> {}", name, std::fs::canonicalize(std::fs::read_link(file).unwrap()).unwrap_or(file.clone()).to_str().unwrap_or(name))),
       Self::Path => text_effects::bold(name),
-      Self::Pipe => text_effects::bold(&format!("{}|", name)),
+      Self::Pipe => text_effects::bold(&format!("{}{}|", name, termion::color::Fg(termion::color::White))),
       Self::CharD => text_effects::bold(name),
       Self::BlockD => text_effects::bold(name),
       Self::Socket => text_effects::bold(name),
