@@ -6,7 +6,7 @@ pub struct Cli {
   /// Give me a directory
   #[structopt(parse(from_os_str), default_value=".")]
   pub dir: std::path::PathBuf,
-  
+
   /// Sorts files by name
   #[structopt(short = "n", long = "name")]
   pub name: bool,
@@ -26,4 +26,11 @@ pub struct Cli {
   /// Groups directorys before files
   #[structopt(short = "g", long = "gdf")]
   pub gdf: bool,
+
+  /// Enables long mode (permissions, size, user, group)
+  #[structopt(short = "l", long = "long")]
+  pub long: bool,
+
+  #[structopt(long="time-format", default_value = "%e %b %T")]
+  pub time_format: String, 
 }

@@ -17,6 +17,10 @@ struct File {
   file_type: Vec<PathType>,
   group: String,
   user: String,
+  modified: String,
+  created: String,
+  size: String,
+  perms: String,
 }
 
 enum DirSortType {
@@ -52,27 +56,39 @@ impl PathType {
     Ok(return_val)
   }
 
+  fn get_letter_for_type(&self) -> String {
+    match self {
+      Self::Dir =>     String::from(format!("{}d{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      Self::Symlink => String::from(format!("{}l{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      Self::Pipe =>    String::from(format!("{}|{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      Self::CharD =>   String::from(format!("{}c{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      Self::BlockD =>  String::from(format!("{}b{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      Self::Socket =>  String::from(format!("{}s{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+      _ =>             String::from(format!("{}.{}{}", self.get_color_for_type(), termion::color::Fg(termion::color::Reset), termion::color::Bg(termion::color::Reset)) ),
+    }
+  }
+
   fn get_color_for_type(&self) -> String {
     match self {
-      Self::Dir => format!("{}", termion::color::Fg(termion::color::LightBlue)),
+      Self::Dir =>     format!("{}", termion::color::Fg(termion::color::LightBlue)),
       Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
-      Self::Path => format!("{}", termion::color::Fg(termion::color::White)),
-      Self::Pipe => format!("{}", termion::color::Fg(termion::color::Yellow)),
-      Self::CharD => format!("{}{}", termion::color::Bg(termion::color::Yellow), termion::color::Fg(termion::color::LightBlue)),
-      Self::BlockD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
-      Self::Socket => format!("{}", termion::color::Fg(termion::color::LightRed)),
+      Self::Path =>    format!("{}", termion::color::Fg(termion::color::White)),
+      Self::Pipe =>    format!("{}", termion::color::Fg(termion::color::Yellow)),
+      Self::CharD =>   format!("{}{}", termion::color::Bg(termion::color::Yellow), termion::color::Fg(termion::color::LightBlue)),
+      Self::BlockD =>  format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::Socket =>  format!("{}", termion::color::Fg(termion::color::LightRed)),
     }
   }
 
   fn get_text_traits_for_type(&self, name: &str, file: &std::path::PathBuf) -> String {
     match self {
-      Self::Dir => text_effects::bold(&format!("{}{}/", name, termion::color::Fg(termion::color::White))),
+      Self::Dir =>     text_effects::bold(&format!("{}{}/", name, termion::color::Fg(termion::color::White))),
       Self::Symlink => text_effects::italic(&format!("{} -> {}", name, std::fs::canonicalize(std::fs::read_link(file).unwrap()).unwrap_or(file.clone()).to_str().unwrap_or(name))),
-      Self::Path => text_effects::bold(name),
-      Self::Pipe => text_effects::bold(&format!("{}{}|", name, termion::color::Fg(termion::color::White))),
-      Self::CharD => text_effects::bold(name),
-      Self::BlockD => text_effects::bold(name),
-      Self::Socket => text_effects::bold(&format!("{}{}=", name, termion::color::Fg(termion::color::White))),
+      Self::Path =>    text_effects::bold(name),
+      Self::Pipe =>    text_effects::bold(&format!("{}{}|", name, termion::color::Fg(termion::color::White))),
+      Self::CharD =>   text_effects::bold(name),
+      Self::BlockD =>  text_effects::bold(name),
+      Self::Socket =>  text_effects::bold(&format!("{}{}=", name, termion::color::Fg(termion::color::White))),
     }
   }
 }
@@ -80,8 +96,12 @@ impl PathType {
 impl File {
   fn new(file: std::path::PathBuf) -> Self {
     Self {
-      group: utils::get_group::group( file.clone() ),
-      user: utils::get_user::user( file.clone() ),
+      group:     utils::get_group::group( file.clone() ),
+      user:      utils::get_user::user( file.clone() ),
+      modified:  utils::file_times::modified( file.clone(), input::Cli::from_args().time_format ),
+      created:   utils::file_times::created( file.clone(), input::Cli::from_args().time_format ),
+      size:      utils::size::size( file.clone() ), 
+      perms:     utils::perms::perms( file.clone() ),
       file_type: PathType::new(&file).unwrap(),
       path: file,
     }
@@ -200,17 +220,17 @@ impl Directory {
 
   fn sort_paths(&mut self) {
     match get_sort_type([input::Cli::from_args().name, input::Cli::from_args().created, input::Cli::from_args().modified, input::Cli::from_args().size]) {
-      DirSortType::Name => self.self_name_sort(),
-      DirSortType::Created => self.self_create_sort(),
+      DirSortType::Name =>     self.self_name_sort(),
+      DirSortType::Created =>  self.self_create_sort(),
       DirSortType::Modified => self.self_modified_sort(),
-      DirSortType::Size => self.self_size_sort(),
-      DirSortType::Not => (),
+      DirSortType::Size =>     self.self_size_sort(),
+      DirSortType::Not =>      (),
     }
   }
 
   fn sort(&mut self) {
     match input::Cli::from_args().gdf {
-      true => self.sort_directory_then_path(),
+      true =>  self.sort_directory_then_path(),
       false => self.sort_paths(),
     }
   }
@@ -237,6 +257,20 @@ impl std::fmt::Display for File {
     let mut res = String::new();
     for (i, v) in self.file_type.iter().enumerate() {
       if i == 0 {
+        res = format!("{}{}", v.get_color_for_type(), v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap(), &self.path));
+      } else {
+        res = format!("{}{}", v.get_color_for_type(), v.get_text_traits_for_type(&res, &self.path));
+      }
+    }
+    write!(f, "{}", res )
+  }
+}
+
+impl std::fmt::Debug for File {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mut res = String::new();
+    for (i, v) in self.file_type.iter().enumerate() {
+      if i == 0 {
         res = v.get_text_traits_for_type(self.path.file_name().unwrap().to_str().unwrap(), &self.path);
         res = format!("{}{}", v.get_color_for_type(), res);
       } else {
@@ -244,7 +278,7 @@ impl std::fmt::Display for File {
         res = format!("{}{}", v.get_color_for_type(), res);
       }
     }
-    write!(f, "{} {} {}", self.user, self.group, res )
+    write!(f, "{} {} {} {} {} {} {}\n", self.perms, self.size, self.created, self.modified, self.group, self.user, res)
   }
 }
 
@@ -252,7 +286,10 @@ impl std::fmt::Display for Directory {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     Ok(
       for i in self.paths.iter() {
-        write!(f, "{}\n", i)?;
+        match input::Cli::from_args().long {
+          true => write!(f, "{:?}", i)?,
+          _ => write!(f, "{} ", i)?,
+        }
       }
     )
   }
