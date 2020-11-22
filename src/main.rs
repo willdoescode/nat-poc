@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 mod input;
 mod text_effects;
 use std::os::unix::fs::{MetadataExt, FileTypeExt};
@@ -54,9 +55,9 @@ impl PathType {
       Self::Symlink => format!("{}", termion::color::Fg(termion::color::LightMagenta)),
       Self::Path => format!("{}", termion::color::Fg(termion::color::White)),
       Self::Pipe => format!("{}", termion::color::Fg(termion::color::Yellow)),
-      Self::CharD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::CharD => format!("{}{}", termion::color::Bg(termion::color::Yellow), termion::color::Fg(termion::color::LightBlue)),
       Self::BlockD => format!("{}", termion::color::Fg(termion::color::LightGreen)),
-      Self::Socket => format!("{}", termion::color::Fg(termion::color::LightGreen)),
+      Self::Socket => format!("{}", termion::color::Fg(termion::color::LightRed)),
     }
   }
 
@@ -68,7 +69,7 @@ impl PathType {
       Self::Pipe => text_effects::bold(&format!("{}{}|", name, termion::color::Fg(termion::color::White))),
       Self::CharD => text_effects::bold(name),
       Self::BlockD => text_effects::bold(name),
-      Self::Socket => text_effects::bold(name),
+      Self::Socket => text_effects::bold(&format!("{}{}=", name, termion::color::Fg(termion::color::White))),
     }
   }
 }
@@ -114,13 +115,12 @@ impl Directory {
             .to_lowercase()
             .contains(&dir.display().to_string().to_lowercase())
             {
-              let f = File::new(p);
-              new_paths.push(f)
+              new_paths.push(File::new(p))
             }
       }
 
       if new_paths.is_empty() {
-        println!("Path could not be found");
+        println!("{}Path could not be found", termion::color::Fg(termion::color::Red));
         std::process::exit(1)
       }
 
