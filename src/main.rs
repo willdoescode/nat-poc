@@ -2,6 +2,7 @@
 
 mod input;
 mod text_effects;
+mod utils;
 use std::os::unix::fs::{MetadataExt, FileTypeExt};
 use structopt::StructOpt;
 use termion;
@@ -10,18 +11,20 @@ struct Directory {
   paths: Vec<File>,
 }
 
+#[derive(Clone)]
+struct File {
+  path: std::path::PathBuf,
+  file_type: Vec<PathType>,
+  group: String,
+  user: String,
+}
+
 enum DirSortType {
   Name,
   Created,
   Modified,
   Size,
   Not,
-}
-
-#[derive(Clone)]
-struct File {
-  path: std::path::PathBuf,
-  file_type: Vec<PathType>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -77,6 +80,8 @@ impl PathType {
 impl File {
   fn new(file: std::path::PathBuf) -> Self {
     Self {
+      group: utils::get_group::group( file.clone() ),
+      user: utils::get_user::user( file.clone() ),
       file_type: PathType::new(&file).unwrap(),
       path: file,
     }
@@ -239,7 +244,7 @@ impl std::fmt::Display for File {
         res = format!("{}{}", v.get_color_for_type(), res);
       }
     }
-    write!(f, "{}", res )
+    write!(f, "{} {} {}", self.user, self.group, res )
   }
 }
 
