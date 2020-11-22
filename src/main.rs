@@ -324,7 +324,11 @@ impl std::fmt::Debug for File {
         res = format!("{}{}", v.get_color_for_type(), res);
       }
     }
-    write!(f, "{} {} {} {} {} {} {}\n", self.perms, self.size, self.created, self.modified, self.group, self.user, res)
+    let mut time = self.modified.clone();
+    if input::Cli::from_args().created_time {
+      time = self.created.clone()
+    }
+    write!(f, "{} {}{} {}{} {} {}{} {}\n", self.perms, termion::color::Fg(termion::color::LightGreen), self.size, termion::color::Fg(termion::color::Yellow), self.user, self.group, termion::color::Fg(termion::color::Blue), time, res)
   }
 }
 

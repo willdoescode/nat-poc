@@ -31,6 +31,11 @@ pub struct Cli {
   #[structopt(short = "l", long = "long")]
   pub long: bool,
 
+  /// Formats the time output
   #[structopt(long="time-format", default_value = "%e %b %T")]
-  pub time_format: String, 
+  pub time_format: String,
+
+  /// Shows the file created time instead of the file modified time
+  #[structopt(long = "ct")]
+  pub created_time: bool
 }
