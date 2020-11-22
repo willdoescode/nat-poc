@@ -12,13 +12,13 @@ pub fn perms(file: std::path::PathBuf) -> String {
 
 fn masking(mode: u16, read: u16, write: u16, execute: u16) -> String {
   match (mode & read, mode & write, mode & execute) {
-    (0, 0, 0) => "---",
-    (_, 0, 0) => "r--",
-    (0, _, 0) => "-w-",
-    (0, 0, _) => "--x",
-    (_, 0, _) => "r-x",
-    (_, _, 0) => "rw-",
-    (0, _, _) => "-wx",
-    (_, _, _) => "rwx",
+    (0, 0, 0) => format!("{}-{}-{}-{}", termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::Reset)),
+    (_, 0, 0) => format!("{}r{}-{}-{}", termion::color::Fg(termion::color::Yellow), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::Reset)),
+    (0, _, 0) => format!("{}-{}w{}-{}", termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightRed), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::Reset)),
+    (0, 0, _) => format!("{}-{}-{}x{}", termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightGreen), termion::color::Fg(termion::color::Reset)),
+    (_, 0, _) => format!("{}r{}-{}x{}", termion::color::Fg(termion::color::Yellow), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightGreen), termion::color::Fg(termion::color::Reset)),
+    (_, _, 0) => format!("{}r{}w{}-{}", termion::color::Fg(termion::color::Yellow), termion::color::Fg(termion::color::LightRed), termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::Reset)),
+    (0, _, _) => format!("{}-{}w{}x{}", termion::color::Fg(termion::color::LightBlack), termion::color::Fg(termion::color::LightRed), termion::color::Fg(termion::color::LightGreen), termion::color::Fg(termion::color::Reset)),
+    (_, _, _) => format!("{}r{}w{}x{}", termion::color::Fg(termion::color::Yellow), termion::color::Fg(termion::color::LightRed), termion::color::Fg(termion::color::LightGreen), termion::color::Fg(termion::color::Reset)),
   }.to_string()
 }

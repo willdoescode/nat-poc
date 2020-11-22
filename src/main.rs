@@ -234,6 +234,52 @@ impl Directory {
       false => self.sort_paths(),
     }
   }
+
+  fn add_space(&mut self) {
+    let mut gs = 0;
+    let mut us = 0;
+    let mut ss = 0;
+    for p in self.paths.clone() {
+      if p.group.len() > gs {
+        gs = p.group.len()
+      }
+      if p.user.len() > us {
+        us = p.user.len()
+      }
+      if p.size.len() > ss {
+        ss = p.size.len()
+      }
+    }
+
+    for p in 0..self.paths.clone().len() {
+      let ghold = &self.paths.clone()[p].group;
+      let uhold = &self.paths.clone()[p].user;
+      let shold = &self.paths.clone()[p].size;
+      let gspace = gs - ghold.len();
+      let uspace = us - uhold.len();
+      let sspace = ss - shold.len();
+      let mut gwidth = String::from("");
+      for _ in 0..gspace {
+        gwidth.push(' ')
+      }
+      let mut uwidth = String::from("");
+      for _ in 0..uspace {
+        uwidth.push(' ')
+      }
+      let mut swidth = String::from("");
+      for _ in 0..sspace {
+        swidth.push(' ')
+      } 
+      self.paths[p].group = format!("{}{}", ghold, gwidth );
+      self.paths[p].user = format!("{}{}", uhold, uwidth );
+      self.paths[p].size = format!("{}{}", swidth, shold);
+    }
+  }
+
+  fn setup(&mut self) {
+    self.sort();
+    self.add_space(); 
+  }
 }
 
 fn name_sort(dir: &mut Vec<File>) {
@@ -297,7 +343,7 @@ impl std::fmt::Display for Directory {
 
 fn main() {
   let mut dir = Directory::new(input::Cli::from_args().dir).unwrap();
-  dir.sort();
+  dir.setup();
   println!("{}", dir)
 }
 
